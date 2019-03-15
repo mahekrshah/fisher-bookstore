@@ -12,3 +12,4 @@ namespace Fisher.Bookstore.Models
 
             public DbSet<Book> Books { get; set; }
     }
+}
