@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Fisher.Bookstore.Models;
 using Microsoft.AspNetCore.Mvc;
+using Fisher.Bookstore.Api.Data;
 
 namespace Fisher.Bookstore.Api.Controllers
 {
@@ -16,32 +17,38 @@ namespace Fisher.Bookstore.Api.Controllers
         public BooksController(BookstoreContext db)
         {
             this.db = db;
-if (this.db.Books.Count() == 0)
+            if (this.db.Books.Count() == 0)
             {
                 this.db.Books.Add(new Book()
                 {
                     Id = 1,
                     Title = "Design Patterns",
-                    Author = "Erich Gamma",
+                    Author = new Author (){
+                    Name = "Erich Gamma"
+                    },
                     ISBN = "978-0201633610"
                 });
                 this.db.Books.Add(new Book()
                 {
                     Id = 2,
                     Title = "Continuous Delivery",
-                    Author = "Jez Humble",
+                    Author = new Author (){
+                    Name = "Jez Humble"
+                    },
                     ISBN = "978-0321601919"
                 });
                 this.db.Books.Add(new Book()
                 {
                     Id = 3,
                     Title = "The DevOps Handbook",
-                    Author = "Gene Kim",
+                    Author = new Author (){
+                    Name = "Jene Kim"
+                    },
                     ISBN = "978-1942788003"
                 });
             }
             this.db.SaveChanges();
-             }
+        }
 
         [HttpGet]
         public IActionResult Get()
@@ -49,7 +56,7 @@ if (this.db.Books.Count() == 0)
             return Ok(db.Books);
         }
 
-         [HttpGet("{id}", Name = "GetBook")]
+        [HttpGet("{id}", Name = "GetBook")]
         public IActionResult GetBook(int id)
         {
             var book = db.Books.FirstOrDefault(b => b.Id == id);
@@ -74,25 +81,20 @@ if (this.db.Books.Count() == 0)
             db.SaveChanges();
 
             return CreatedAtRoute("GetBook", new { id = book.Id }, book);
-
         }
 
-        [HttpPut("{id}")]  
+        [HttpPut("{id}")]
         public IActionResult Put(int id, [FromBody]Book book)
         {
-            // validate the incoming book
             if (book == null || book.Id != id)
-            { 
+            {
                 return BadRequest();
             }
-
-            //verify the book is in the database
             var bookToEdit = db.Books.FirstOrDefault(b => b.Id == id);
-            if (bookToEdit == null)
+            if(bookToEdit == null)
             {
                 return NotFound();
-            }       
-
+            }
             bookToEdit.Title = book.Title;
             bookToEdit.ISBN = book.ISBN;
 
@@ -101,22 +103,19 @@ if (this.db.Books.Count() == 0)
 
             return NoContent();
         }
-
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
             var book = db.Books.FirstOrDefault(b => b.Id == id);
 
-            if (book == null)
-            {
+            if(book == null){
                 return NotFound();
             }
-
             db.Books.Remove(book);
             db.SaveChanges();
 
             return NoContent();
-        
-        }
         }
     }
+}
+//small test
