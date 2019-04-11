@@ -13,6 +13,10 @@ using Microsoft.Extensions.Options;
 using Fisher.Bookstore.Models;
 using Microsoft.EntityFrameworkCore;
 using Fisher.Bookstore.Api.Data;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace Fisher.Bookstore.Api
 {
@@ -30,19 +34,39 @@ namespace Fisher.Bookstore.Api
             services.AddDbContext<BookstoreContext>(options =>
             options.UseNpgsql(Configuration.GetConnectionString("BookstoreContext")));
 
+            // Add this for identity
+            services.AddIdentity<ApplicationUser, IdentityRole>()
+            .AddEntityFrameworkStores<BookstoreContext>()
+            .AddDefaultTokenProviders();
+
+            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+            
+            services.AddAuthentication(option =>
+            {
+                option.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                option.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+              .AddJwtBearer(jwtOptions =>
+              {
+                  jwtOptions.TokenValidationParameters = new TokenValidationParameters()
+                  {
+                      ValidateActor = true,
+                      ValidateAudience = true,
+                      ValidateLifetime = true,
+                      ValidIssuer = Configuration["JWTConfiguration:Issuer"],
+                      ValidAudience = Configuration["JWTConfiguration:Audience"],
+                      IssuerSigningKey = new
+            SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["JWTConfiguration.Key"])
+            )
+                  };
+              });
+
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
         }
 
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
-            else
-            {
-                app.UseHsts();
-            }
+            app.UseAuthentication();
 
             app.UseHttpsRedirection();
             app.UseMvc();
