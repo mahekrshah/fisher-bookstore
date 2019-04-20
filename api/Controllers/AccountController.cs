@@ -6,12 +6,13 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using Fisher.Bookstore.Api.Data;
-using Fisher.Bookstore.Models;
+using Fisher.Bookstore.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens;
 
 namespace Fisher.Bookstore.Api.Controllers
 {
@@ -23,58 +24,65 @@ namespace Fisher.Bookstore.Api.Controllers
         private UserManager<ApplicationUser> userManager;
         private SignInManager<ApplicationUser> signInManager;
         private IConfiguration configuration;
-        public AccountController(UserManager<ApplicationUser> userManager ,
-               SignInManager<ApplicationUser> signInManager , 
-               IConfiguration configuration)
+
+        public AccountController(UserManager<ApplicationUser> userManager, 
+        SignInManager<ApplicationUser> signInManager, 
+        IConfiguration configuration)
         {
-            this.userManager = userManager;
+            this.userManager = userManager; 
             this.signInManager = signInManager;
-            this.configuration = configuration;
-        }
-          [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] ApplicationUser registration)
-        {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest();
+            this.configuration = configuration; 
         }
 
-        ApplicationUser user = new ApplicationUser
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] ApplicationUser registration)
         {
-            Email = registration.Email,
-            UserName = registration.Email,
-            Id = registration.Email
-        };
-        IdentityResult result = await userManager.CreateAsync(user, registration.Password);
-        if (!result.Succeeded)
-        {
-            foreach (var err in result.Errors)
+            if(!ModelState.IsValid)
             {
-                ModelState.AddModelError(err.Code, err.Description);
+                return BadRequest();
             }
-            return BadRequest(ModelState);
+
+            ApplicationUser user = new ApplicationUser
+            {
+                Email = registration.Email,
+                UserName = registration.Email,
+                Id = registration.Email
+            };
+
+            IdentityResult result = await userManager.CreateAsync(user, registration.Password);
+
+            if(!result.Succeeded)
+            {
+                foreach (var err in result.Errors)
+                {
+                    ModelState.AddModelError(err.Code, err.Description);
+                }
+
+                return BadRequest(ModelState);
             }
-        return Ok();
+            return Ok();
         }
-            [AllowAnonymous]
+
+        [AllowAnonymous]
         [HttpPost("login")]
-        public async Task<IActionResult> Login ([FromBody] ApplicationUser login)
+        public async Task<IActionResult> Login([FromBody] ApplicationUser login)
         {
-            var result = await signInManager.PasswordSignInAsync(login.Email,
-            login.Password, isPersistent: false, lockoutOnFailure: false);
-            if (!result.Succeeded)
+            var result = await signInManager.PasswordSignInAsync(login.Email, login.Password, isPersistent: false, lockoutOnFailure: false); 
+            if(!result.Succeeded)
             {
                 return Unauthorized();
             }
 
             ApplicationUser user = await userManager.FindByEmailAsync(login.Email);
-            JwtSecurityToken token = await GenerateTokenAsync(user);
+            JwtSecurityToken token =  GenerateTokenAsync(user);
             string serializedToken = new JwtSecurityTokenHandler().WriteToken(token);
-            var response = new { Token = serializedToken };
+
+            var response = new { Token = serializedToken }; 
             return Ok(response);
+
         }
 
-        private async Task<JwtSecurityToken> GenerateTokenAsync(ApplicationUser user)
+        private JwtSecurityToken GenerateTokenAsync(ApplicationUser user)
         {
             var claims = new List<Claim>()
             {
@@ -83,22 +91,27 @@ namespace Fisher.Bookstore.Api.Controllers
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
                 new Claim(ClaimTypes.Name, user.UserName)
             };
-            var expirationDays = configuration.GetValue<int>("JWTConfiguration:TokenExpirationDays");
+
+            var expirationDays = configuration.GetValue<int>
+            ("JWTConfiguration: TokenExpirationDays");
+
             var signingKey = Encoding.UTF8.GetBytes(configuration.GetValue<string>("JWTConfiguration:Key"));
+
             var token = new JwtSecurityToken(
                 issuer: configuration.GetValue<string>("JWTConfiguration:Issuer"),
-                audience: configuration.GetValue<string>("JWTConfiguration:Audience"),    
+                audience: configuration.GetValue<string>("JWTConfiguration:Audience"),
                 claims: claims,
                 expires: DateTime.UtcNow.Add(TimeSpan.FromDays(expirationDays)),
                 notBefore: DateTime.UtcNow,
                 signingCredentials: new SigningCredentials(new SymmetricSecurityKey(signingKey), SecurityAlgorithms.HmacSha256));
             return token;
         }
-        [Authorize] 
+
+        [Authorize]
         [HttpGet("profile")]
         public IActionResult Profile()
         {
-            return Ok(User.Identity.Name);
+            return Ok(User.Identity.Name); 
         }
     }
 }
